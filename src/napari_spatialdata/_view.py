@@ -19,7 +19,7 @@ from qtpy.QtWidgets import (
 from spatialdata import join_spatialelement_table
 
 from napari_spatialdata._model import DataModel
-from napari_spatialdata._scatterwidgets import AxisWidgets, MatplotlibWidget
+from napari_spatialdata._scatterwidgets import AxisWidgets, PlotWidget
 from napari_spatialdata._widgets import (
     AListWidget,
     CBarWidget,
@@ -60,8 +60,8 @@ class QtAdataScatterWidget(QWidget):
 
         # Matplotlib
 
-        self.matplotlib_widget = MatplotlibWidget(self.viewer, self.model)
-        self.layout().addWidget(self.matplotlib_widget, 1, 0, 1, 3)
+        self.plot_widget = PlotWidget(self.viewer, self.model)
+        self.layout().addWidget(self.plot_widget, 1, 0, 1, 3)
 
         # Names of tables annotating respective layer.
         table_label = QLabel("Tables annotating layer:")
@@ -84,7 +84,7 @@ class QtAdataScatterWidget(QWidget):
 
         self.plot_button_widget = QPushButton("Plot")
         self.plot_button_widget.clicked.connect(
-            lambda: self.matplotlib_widget._onClick(
+            lambda: self.plot_widget._onClick(
                 self.x_widget.widget.data,
                 self.y_widget.widget.data,
                 self.color_widget.widget.data,  # type:ignore[arg-type]
@@ -104,10 +104,10 @@ class QtAdataScatterWidget(QWidget):
 
     def export(self) -> None:
         """Export shapes."""
-        if (self.matplotlib_widget.selector) is None or (self.matplotlib_widget.selector.exported_data is None):
+        if (self.plot_widget.selector) is None or (self.plot_widget.selector.exported_data is None):
             raise ValueError("Data points haven't been selected from the matplotlib visualisation.")
 
-        self.matplotlib_widget.selector.export(self.model.adata)
+        self.plot_widget.selector.export(self.model.adata)
 
     def _update_adata(self) -> None:
         if (table_name := self.table_name_widget.currentText()) == "":

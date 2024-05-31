@@ -15,6 +15,7 @@ from napari.layers import Layer
 from napari.viewer import Viewer
 from napari_matplotlib.base import NapariMPLWidget
 from pandas.api.types import CategoricalDtype
+from pyqtgraph import GraphicsLayoutWidget
 from qtpy import QtWidgets
 from qtpy.QtCore import Signal
 
@@ -206,6 +207,106 @@ class ScatterListWidget(AListWidget):
     @data.setter
     def data(self, data: NDArrayA | dict[str, Any]) -> None:
         self._data = data
+
+
+class PlotWidget(GraphicsLayoutWidget):
+    def __init__(self, viewer: Viewer | None, model: DataModel):
+
+        self.is_widget = False
+        if viewer is None:
+            viewer = Viewer()
+            self.is_widget = True
+
+        super().__init__()
+
+        self._viewer = viewer
+        self._model = model
+        # self.axes = self.canvas.figure.subplots()
+        self.colorbar = None
+        self.selector = None
+
+        self.scatter_plot = self.addPlot(title="Scatter Plot")
+        self.scatter = None
+
+        if self.is_widget:
+            self._viewer.close()
+
+    def _onClick(
+        self,
+        x_data: NDArrayA | pd.Series,
+        y_data: NDArrayA | pd.Series,
+        color_data: NDArrayA | dict[str, NDArrayA | pd.Series | dict[str, str]],
+        x_label: str | None,
+        y_label: str | None,
+        color_label: str | None,
+    ) -> None:
+        # self.cat = None
+        # self.palette = None
+
+        # if isinstance(color_data, dict):
+        #     self.data = [x_data, y_data, color_data["vec"]]
+        #     self.cat = color_data["cat"]
+        #     self.palette = color_data["palette"]
+
+        # else:
+        #     norm = plt.colors.Normalize(vmin=np.amin(color_data), vmax=np.amax(color_data))
+        #     cmap = plt.cm.viridis  # TODO (rahulbshrestha): Replace this with colormap used in scatterplot
+        #     self.data = [x_data, y_data, cmap(norm(color_data))]
+
+        # self.x_label = x_label
+        # self.y_label = y_label
+        # self.color_label = color_label
+
+        self.plot()
+
+    def plot(self) -> None:
+
+        logger.info("Plotting coordinates.")
+        logger.info("test test test")
+
+        # self.clear()
+
+        # self.scatter = pg.ScatterPlotItem(size=10)
+        # self.scatter.addPoints(x=self.data[0], y=self.data[1])
+        self.scatter = self.scatter_plot.plot(self.data[0], self.data[1], pen=None, symbol="o", symbolBrush="b")
+
+        # self.org_brush = [pg.mkBrush("b") for _ in range(len(self.data))]
+
+        # for i, point in enumerate(self.scatter.points()):
+        #     point.setBrush(self.org_brush[i])
+
+        self.addItem(self.scatter)
+
+        # self.axes.scatter(x=self.data[0], y=self.data[1], c=self.data[2])
+        # self.axes.set_xlabel(self.x_label)
+        # self.axes.set_ylabel(self.y_label)
+
+        # if self.palette is not None:
+        #     _add_categorical_legend(
+        #         self.axes,
+        #         self.cat,
+        #         palette=self.palette,
+        #     )
+        #     self.colorbar = None
+        # else:
+        #     self.colorbar = self.canvas.figure.colorbar(self.scatterplot)
+        #     if self.colorbar is None:
+        #         raise ValueError("Colorbar hasn't been created.")
+        #     self.colorbar.set_label(self.color_label)
+
+        # self.canvas.draw()
+
+        # self.selector = SelectFromCollection(
+        #     self._model, self.axes, self.scatterplot, self.data
+        # )  # type:ignore[assignment]
+
+    def clear(self) -> None:
+        pass
+        # if self.colorbar:
+        #     self.colorbar.remove()
+        #     self.colorbar = None
+
+        # self.axes.clear()
 
 
 class MatplotlibWidget(NapariMPLWidget):
