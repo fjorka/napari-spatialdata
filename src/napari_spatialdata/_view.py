@@ -1,6 +1,7 @@
 from typing import Any, FrozenSet, Optional, Sequence
 
 import napari
+import numpy as np
 from anndata import AnnData
 from loguru import logger
 from napari._qt.qt_resources import get_stylesheet
@@ -27,9 +28,73 @@ from napari_spatialdata._widgets import (
     RangeSliderWidget,
 )
 
-__all__ = ["QtAdataViewWidget", "QtAdataScatterWidget"]
+__all__ = ["QtAdataViewWidget", "QtAdataScatterWidget", "QtAdataScatterWidgetNapari"]
 
 from napari_spatialdata.utils._utils import _get_init_table_list
+
+
+class QtAdataScatterWidgetNapari(QWidget):
+    """Adata viewer widget based on napari window itself."""
+
+    def __init__(self, input: AnnData):
+        super().__init__()
+
+        self._model = DataModel()
+
+        self._plot_viewer = napari.Viewer()
+
+        self.setLayout(QGridLayout())
+
+        self.setStyleSheet(get_stylesheet("dark"))
+
+        # Names of tables annotating respective layer.
+        table_label = QLabel("Tables annotating layer:")
+        self.table_name_widget = QComboBox()
+        if (table_names := self.model.table_names) is not None:
+            self.table_name_widget.addItems(table_names)
+
+        self.table_name_widget.currentTextChanged.connect(self._update_adata)
+        self.layout().addWidget(table_label, 2, 0, Qt.AlignLeft)
+        self.layout().addWidget(self.table_name_widget)
+
+        self.x_widget = AxisWidgets(self.model, "X-axis")
+        self.layout().addWidget(self.x_widget, 3, 0, 6, 1)
+
+        self.y_widget = AxisWidgets(self.model, "Y-axis")
+        self.layout().addWidget(self.y_widget, 3, 1, 6, 1)
+
+        self.color_widget = AxisWidgets(self.model, "Color", True)
+        self.layout().addWidget(self.color_widget, 3, 2, 6, 1)
+
+        self.plot_button_widget = QPushButton("Plot")
+        self.plot_button_widget.clicked.connect(self.update_plot)
+
+        self.export_button_widget = QPushButton("Export")
+        self.export_button_widget.clicked.connect(self.export)
+
+        self.layout().addWidget(self.plot_button_widget, 9, 0, 1, 2)
+        self.layout().addWidget(self.export_button_widget, 9, 2, 1, 2)
+
+    def update_plot(self) -> None:
+        """Replot the data points based on the updated selection."""
+        # clean
+        self._viewer.layers["Points"].data = None
+
+        # plot
+        t = self.color_widget.widget.data
+        point_properties = {"sel": t}
+        self._viewer.add_points(
+            np.array([self.x_widget.widget.data, self.y_widget.widget.data]),
+            properties=point_properties,
+            face_color="sel",
+            size=50,
+            face_colormap="viridis",
+        )
+        self._viewer.layers["Points"].editable = False
+
+    def export(self) -> None:
+        """Export selection to anndata."""
+        self._viewer.status = "Exporting data points to anndata."
 
 
 class QtAdataScatterWidget(QWidget):

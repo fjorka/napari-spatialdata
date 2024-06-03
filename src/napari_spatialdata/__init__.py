@@ -16,5 +16,6 @@ from napari_spatialdata._interactive import Interactive as Interactive  # noqa: 
 from napari_spatialdata._reader import get_reader  # noqa: E402
 from napari_spatialdata._view import (  # noqa: E402
     QtAdataScatterWidget,
+    QtAdataScatterWidgetNapari,
     QtAdataViewWidget,
 )

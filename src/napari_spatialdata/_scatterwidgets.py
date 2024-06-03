@@ -11,7 +11,7 @@ from napari.viewer import Viewer
 from pandas.api.types import CategoricalDtype
 from pyqtgraph import GraphicsLayoutWidget
 from qtpy import QtWidgets
-from qtpy.QtCore import QSize, Signal
+from qtpy.QtCore import QSize, Qt, Signal
 from qtpy.QtGui import QColor, QIcon
 from qtpy.QtWidgets import QPushButton
 
@@ -144,6 +144,9 @@ class PlotWidget(GraphicsLayoutWidget):
         if self.is_widget:
             self._viewer.close()
 
+        self.scatter_plot = self.addPlot()
+        self.scatter = None
+
         # Adding a button to toggle auto-range
         self.auto_range_button = QPushButton(self)
         self.auto_range_button.setIcon(
@@ -155,68 +158,38 @@ class PlotWidget(GraphicsLayoutWidget):
         self.auto_range_button.setToolTip("Auto Range")
         self.auto_range_button.move(10, 10)
 
-        # self.lassoPoints = []
-        # self.lasso = QtGui.QPolygonF()
-        # self.lassoItem = QGraphicsPolygonItem()
-        # self.lassoItem.setPen(pg.mkPen('g', width=2))
-        # self.lassoItem.setBrush(pg.mkBrush(0,255,0,50))
-        # self.addItem(self.lassoItem, ignoreBounds=True)
+        # Handling drawing mode
 
-        self.scatter_plot = self.addPlot(title="")
-        self.scatter = None
+        # Drawing mode toggle button
+        self.drawing = False
+        self.drawing_mode_button = QPushButton(self)
+        self.drawing_mode_button.setIcon(QIcon(r"../../src/napari_spatialdata/icons/icons8-pencil-drawing-50.png"))
+        self.drawing_mode_button.setIconSize(QSize(24, 24))
+        self.auto_range_button.setStyleSheet("QPushButton {background-color: transparent;}")
+        self.drawing_mode_button.setCheckable(True)
+        self.drawing_mode_button.clicked.connect(self.toggle_drawing_mode)
+        self.drawing_mode_button.move(50, 10)  # Adjust position as needed
 
-    # def mousePressEvent(self, event):
-    #     if event.button() == QtCore.Qt.LeftButton:
-    #         # Left mouse button: start or continue drawing the lasso
-    #         #if not self.lassoPoints:
-    #         self.lassoPoints = [self.vb.mapSceneToView(event.scenePos())]
-    #         self.lasso = QtGui.QPolygonF(self.lassoPoints)
-    #         self.lassoItem.setPolygon(self.lasso)
+        # Connect mouse events
+        self.scatter_plot.setMouseEnabled(x=True, y=True)
+        self.scatter_plot.scene().sigMouseClicked.connect(self.mouseClickEvent)
 
-    #         self.setMouseEnabled(x=False, y=False)  # Disable default dragging behavior
-    #         event.accept()
-    #     elif event.button() == QtCore.Qt.RightButton:
+    def toggle_drawing_mode(self) -> None:
+        self.drawing = not self.drawing
+        if self.drawing:
+            self.scatter_plot.setMouseEnabled(x=False, y=False)
+            self.scatter_plot.setMenuEnabled(False)
+        else:
+            self.scatter_plot.setMouseEnabled(x=True, y=True)
+            self.scatter_plot.setMenuEnabled(True)
 
-    #         # Right mouse click
+    def mouseClickEvent(self, event: Any) -> None:
+        if self.drawing:
+            if event.button() == Qt.LeftButton:
+                logger.info("Left click detected")
 
-    #         self.lassoPoints = []
-    #         self.lasso.clear()
-    #         self.lassoItem.setPolygon(self.lasso)
-    #         self.setMouseEnabled(x=True, y=True) # Re-enable default dragging behavior
-    #         self.resetPointsColor()
-    #         event.accept()
-    #     else:
-    #         super().mousePressEvent(event)
-
-    # def mouseMoveEvent(self, event):
-    #     if self.lassoPoints:
-    #         self.lassoPoints.append(self.vb.mapSceneToView(event.scenePos()))
-    #         self.lasso = QtGui.QPolygonF(self.lassoPoints)
-    #         self.lassoItem.setPolygon(self.lasso)
-    #         event.accept()
-    #     else:
-    #         super().mouseMoveEvent(event)
-
-    # def mouseReleaseEvent(self, event):
-    #     if self.lassoPoints and event.button() == QtCore.Qt.LeftButton:
-
-    #         self.highlightPointsWithinLasso()
-    #         self.setMouseEnabled(x=True, y=True) # Re-enable default dragging behavior
-
-    #         event.accept()
-    #     else:
-    #         super().mouseReleaseEvent(event)
-
-    # def highlightPointsWithinLasso(self):
-    #     # Change color of points inside the lasso to red
-    #     for i, point in enumerate(self.scatter.points()):
-    #         if self.lasso.containsPoint(point.pos(), QtCore.Qt.OddEvenFill):
-    #             point.setBrush(pg.mkBrush('r'))
-
-    # def resetPointsColor(self):
-    #     # Reset points to their original color
-    #     for i, point in enumerate(self.scatter.points()):
-    #         point.setBrush(self.org_brush[i])
+            elif event.button() == Qt.RightButton:
+                logger.info("Right click detected")
 
     def use_auto_range(self) -> None:
         """Uses the auto-ranging feature for the plot"""
