@@ -17,7 +17,7 @@ from pyqtgraph.graphicsItems import ROI
 from pyqtgraph.Qt import QtCore, QtGui, QtWidgets
 from pyqtgraph.Qt.QtCore import pyqtSignal
 from pyqtgraph.widgets.ColorButton import ColorButton
-from qtpy.QtCore import QSize, Qt, Signal
+from qtpy.QtCore import QPointF, QSize, Qt, Signal
 from qtpy.QtGui import QColor, QIcon
 from qtpy.QtWidgets import QPushButton
 from scipy.spatial import cKDTree
@@ -320,6 +320,7 @@ class PlotWidget(GraphicsLayoutWidget):
         if self.is_widget:
             self._viewer.close()
 
+        self.BUTTON_SHIFT = 40
         self.scatter: HoverScatterPlotItem | None = None
         self.x_data: NDArrayA | pd.Series | None = None
         self.y_data: NDArrayA | pd.Series | None = None
@@ -363,7 +364,7 @@ class PlotWidget(GraphicsLayoutWidget):
         self.last_pos: tuple[Any, Any] | None = None
         self.current_points: list[tuple[Any, Any]] = []
         self.roi_list: list[ROI] = []
-        self.initial_pos: tuple[Any, Any] | None = None
+        self.initial_pos: QPointF | None = None
 
         # Adding a button for a default view
         self.auto_range_button = QPushButton(self)
@@ -374,12 +375,11 @@ class PlotWidget(GraphicsLayoutWidget):
         self.auto_range_button.setToolTip("Auto Range")
         self.auto_range_button.move(10, 10)
 
-        # Polygon drawing mode toggle button
-        self.drawing = False
-        self.drawing_mode_button = QPushButton(self)
-        self.drawing_mode_button.setIcon(QIcon(str(Path(__file__).parent / "resources/icons8-polygon-80.png")))
-        self.drawing_mode_button.setIconSize(QSize(24, 24))
-        self.drawing_mode_button.setStyleSheet(
+        # Adding a button for y axis flip
+        self.flip_y_button = QPushButton(self)
+        self.flip_y_button.setIcon(QIcon(str(Path(__file__).parent / "resources/y_axis_flip.png")))
+        self.flip_y_button.setIconSize(QSize(24, 24))  # Icon size
+        self.flip_y_button.setStyleSheet(
             f"""
             QPushButton {{
                 background-color: transparent;
@@ -390,10 +390,10 @@ class PlotWidget(GraphicsLayoutWidget):
             }}
         """
         )
-        self.drawing_mode_button.setCheckable(True)
-        self.drawing_mode_button.clicked.connect(self.toggle_drawing_mode)
-        self.drawing_mode_button.setToolTip("Add freehand ROIs.")
-        self.drawing_mode_button.move(90, 10)  # Adjust position as needed
+        self.flip_y_button.setCheckable(True)
+        self.flip_y_button.clicked.connect(self.flip_y_axis)
+        self.flip_y_button.setToolTip("Flip Y Axis.")
+        self.flip_y_button.move(10 + self.BUTTON_SHIFT, 10)
 
         # Rectangle drawing mode toggle button
         self.rectangle = False
@@ -414,7 +414,28 @@ class PlotWidget(GraphicsLayoutWidget):
         self.rectangle_mode_button.setCheckable(True)
         self.rectangle_mode_button.clicked.connect(self.toggle_rectangle_mode)
         self.rectangle_mode_button.setToolTip("Add rectangular ROIs.")
-        self.rectangle_mode_button.move(50, 10)  # Adjust position as needed
+        self.rectangle_mode_button.move(10 + 2 * self.BUTTON_SHIFT, 10)  # Adjust position as needed
+
+        # Polygon drawing mode toggle button
+        self.drawing = False
+        self.drawing_mode_button = QPushButton(self)
+        self.drawing_mode_button.setIcon(QIcon(str(Path(__file__).parent / "resources/icons8-polygon-80.png")))
+        self.drawing_mode_button.setIconSize(QSize(24, 24))
+        self.drawing_mode_button.setStyleSheet(
+            f"""
+            QPushButton {{
+                background-color: transparent;
+                border: none;
+            }}
+            QPushButton:checked {{
+                border: 1px solid rgb{self.color};
+            }}
+        """
+        )
+        self.drawing_mode_button.setCheckable(True)
+        self.drawing_mode_button.clicked.connect(self.toggle_drawing_mode)
+        self.drawing_mode_button.setToolTip("Add freehand ROIs.")
+        self.drawing_mode_button.move(10 + 3 * self.BUTTON_SHIFT, 10)  # Adjust position as needed
 
         # Connect mouse events
         self.scatter_plot.setMouseEnabled(x=True, y=True)
@@ -485,6 +506,13 @@ class PlotWidget(GraphicsLayoutWidget):
         """Clear the hover highlight."""
         self.hovered_point.setData([], [])
         self.data_point_label.setText("Value: N/A")
+
+    def flip_y_axis(self) -> None:
+        """Flip the Y axis of the scatter plot."""
+
+        view = self.scatter_plot.getViewBox()
+        status = view.yInverted()
+        view.invertY(~status)
 
     def use_auto_range(self) -> None:
         """Default display of the graph."""
